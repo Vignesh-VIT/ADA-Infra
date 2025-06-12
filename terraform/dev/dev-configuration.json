@@ -1,0 +1,162 @@
+{
+    "resource_groups": {
+        "rg_01": {
+            "name": "rg-atlasms-dev-euw-01",
+            "location": "westeurope",
+            "tags": {
+                "Env": "Development Environment"
+            }
+        }
+    },
+    "keyvaults": {
+        "kv_01": {
+            "name": "kv-atlas-dev-euw-01",
+            "resource_group_key": "rg_01",
+            "sku": "standard"
+        }
+    },
+    "signalr": {
+        "signalr_01": {
+            "signalr_name": "signalr-atlasms-dev-euw-01",
+            "sku": "Standard_S1",
+            "capacity": 1,
+            "service_mode": "Serverless",
+            "resource_group_key": "rg_01"
+        }
+    },
+    "keyvault_access_policies": {
+        "sp_access": {
+            "keyvault_key": "kv_01",
+            "type": "access_policy",
+            "name": "sp_atlas",
+            "key_permissions": [
+                "Get",
+                "List",
+                "Update",
+                "Create",
+                "Import",
+                "Delete",
+                "Recover",
+                "Backup",
+                "Restore"
+            ],
+            "secret_permissions": [
+                "Get",
+                "List",
+                "Set",
+                "Delete",
+                "Recover",
+                "Backup",
+                "Restore",
+                "Purge"
+            ],
+            "certificate_permissions": [
+                "Get",
+                "List",
+                "Update",
+                "Create",
+                "Import",
+                "Delete",
+                "Recover",
+                "Backup",
+                "Restore",
+                "ManageContacts",
+                "ManageIssuers",
+                "GetIssuers",
+                "ListIssuers",
+                "SetIssuers",
+                "DeleteIssuers"
+            ]
+        }
+    },
+    "servicebus": {
+        "service_01": {
+            "sb_ns_name": "sb-atlasms-dev-euw-01",
+            "sb_ns_sku": "Premium",
+            "sb_ns_capacity": 1,
+            "premium_messaging_partitions": 1,
+            "resource_group_key": "rg_01"
+        }
+    },
+    "servicebus_queues": {
+        "queues_01": {
+            "sb_queue_name": "session_queue",
+            "sb_queue_size": 1024,
+            "servicebus_key": "service_01"
+        }
+    },
+    "storage_account": {
+        "storage_account_01": {
+            "storage_account_name": "storageatlasdeveuw01",
+            "account_tier": "Standard",
+            "resource_group_key": "rg_01"
+        }
+    },
+    "storage_network_rules": {
+        "storage_network_rule_01": {
+            "default_action": "Deny",
+            "bosch_ips": [
+                "103.205.152.0/22",
+                "149.226.192.0/21",
+                "45.112.36.0/22",
+                "103.4.124.0/22"
+            ],
+            "storage_account_key": "storage_account_01",
+            "subnet_id_key": "subnet_01",
+            "bypass": [
+                "AzureServices"
+            ]
+        }
+    },
+    "storage_share": {
+        "storage_share_01": {
+            "storage_share_name": "backendstoragevolume",
+            "storage_account_key": "storage_account_01",
+            "quota": 5120
+        }
+    },
+    "cosmos_db": {
+        "cosmosdb": {
+            "cosmosdb_name": "cosmos-atlasms-dev-euw",
+            "public_network_access_enabled": "true",
+            "bosch_ips": [
+                "103.205.152.0/22",
+                "149.226.192.0/21",
+                "45.112.36.0/22",
+                "103.4.124.0/22"
+            ],
+            "resource_group_key": "rg_01"
+        }
+    },
+    "secrets": {
+        "storage_account_name_01": {
+            "name": "azurestorageaccountname",
+            "type": "secret",
+            "keyvault_key": "kv_01"
+            
+        },
+        "storage_account_key_01": {
+            "name": "azurestorageaccountkey",
+            "type": "secret",
+            "keyvault_key": "kv_01"
+            
+        },
+        "servicebus_secret_01": {
+            "name": "servicebus-connection-string",
+            "type": "connection_string",
+            "keyvault_key": "kv_01"
+            
+        },
+        "signalr_secret_01": {
+            "name": "signalr-connection-string",
+            "type": "connection_string",
+            "keyvault_key": "kv_01"
+            
+        },
+        "cosmosdb_secret_01": {
+            "name": "cosmosdb-connection-string",
+            "type": "connection_string",
+            "keyvault_key": "kv_01"
+        }
+    }
+}
