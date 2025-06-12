@@ -24,10 +24,10 @@ env:
   TF_LOG: info
 
 jobs:
-  terraform-verify:
+  terraform-apply:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
-    
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -48,23 +48,6 @@ jobs:
           SUBSCRIPTION_ID=$(grep subscription_id ../${{ inputs.environment }}/terraform.tfvars | cut -d'"' -f2 || echo "${{ secrets.AZURE_SUBSCRIPTION_ID }}")
           echo "ARM_SUBSCRIPTION_ID=$SUBSCRIPTION_ID" >> $GITHUB_ENV
 
-      - name: Install tflint
-        run: |
-          curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
-
-      - name: Terraform linting
-        id: lint
-        run: |
-          cd ${{ inputs.terraform_folder }}
-          tflint --recursive --only=terraform_unused_declarations
-
-      - name: Terraform fmt check
-        id: fmt
-        run: |
-          cd ${{ inputs.terraform_folder }}
-          terraform fmt -check -recursive
-        continue-on-error: false
-
       - name: Terraform Init
         id: init
         run: |
@@ -73,8 +56,22 @@ jobs:
             -backend-config=../${{ inputs.environment }}/backend.tfvars \
             -reconfigure
 
-      - name: Terraform Validate
-        id: validate
+      - name: Download Terraform Plan
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-plan-${{ inputs.environment }}
+          path: ${{ inputs.terraform_folder }}
+      
+      - name: Terraform Apply
+        id: apply
         run: |
           cd ${{ inputs.terraform_folder }}
-          terraform validate -no-color
+          terraform apply -auto-approve tfplan
+
+      # - name: Send Deployment Notifications
+      #   if: always()
+      #   uses: ./.github/actions/notifications/send-teams-alert.yml
+      #   with:
+      #     environment: ${{ inputs.environment }}
+      #     status: ${{ job.status }}
+      #     deployment: true

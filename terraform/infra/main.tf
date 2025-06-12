@@ -87,16 +87,16 @@ module "storage_share" {
   quota              = each.value.quota
 }
 
-module "cosmos_db" {
-  source                        = "../modules/cosmos_db"
-  for_each                      = local.infrastructure_config.cosmos_db
-  cosmosdb_name                 = each.value.cosmosdb_name
-  resource_group_name           = module.resource_groups[each.value.resource_group_key].resource_group_name
-  location                      = module.resource_groups[each.value.resource_group_key].resource_group_location
-  public_network_access_enabled = each.value.public_network_access_enabled
-  bosch_ips                     = each.value.bosch_ips
-  depends_on                    = [module.resource_groups, module.storage_account]
-}
+# module "cosmos_db" {
+#   source                        = "../modules/cosmos_db"
+#   for_each                      = local.infrastructure_config.cosmos_db
+#   cosmosdb_name                 = each.value.cosmosdb_name
+#   resource_group_name           = module.resource_groups[each.value.resource_group_key].resource_group_name
+#   location                      = module.resource_groups[each.value.resource_group_key].resource_group_location
+#   public_network_access_enabled = each.value.public_network_access_enabled
+#   bosch_ips                     = each.value.bosch_ips
+#   depends_on                    = [module.resource_groups, module.storage_account]
+# }
 
 module "secrets" {
   source   = "../modules/keyvault_secret"
@@ -107,5 +107,5 @@ module "secrets" {
     each.value.type == "secret" ? local.secret_values[each.value.name] : null
   )
   key_vault_id = module.keyvault[each.value.keyvault_key].key_vault_id
-  depends_on   = [module.keyvault, module.storage_account, module.signalr, module.servicebus, module.cosmos_db, module.keyvault_access_policy]
+  depends_on   = [module.keyvault, module.storage_account, module.signalr, module.servicebus, module.keyvault_access_policy]
 }

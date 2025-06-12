@@ -1,0 +1,44 @@
+on:
+  workflow_call:
+    inputs:
+      workflow_input:
+        description: 'Environment from workflow dispatch'
+        required: false
+        type: string
+    outputs:
+      environment:
+        description: 'Target environment'
+        value: ${{ jobs.determine-environment.outputs.environment }}
+      is_pr:
+        description: 'Whether this is a PR'
+        value: ${{ jobs.determine-environment.outputs.is_pr }}
+      should_create_pr:
+        description: 'Should create PR to main'
+        value: ${{ jobs.determine-environment.outputs.should_create_pr }}
+
+jobs:
+  determine-environment:
+    name: ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.set-env.outputs.environment }}
+      is_pr: ${{ steps.set-env.outputs.is_pr }}
+      should_create_pr: ${{ steps.set-env.outputs.should_create_pr }}
+
+    steps:
+      - name: Set environment based on branch or workflow input
+        id: set-env
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "environment=prod" >> $GITHUB_OUTPUT
+            echo "is_pr=true" >> $GITHUB_OUTPUT
+            echo "should_create_pr=false" >> $GITHUB_OUTPUT
+          else
+            echo "environment=${{ inputs.environment }}" >> $GITHUB_OUTPUT
+            echo "is_pr=false" >> $GITHUB_OUTPUT
+            if [[ "${{ inputs.environment }}" == "qa" ]]; then
+              echo "should_create_pr=true" >> $GITHUB_OUTPUT
+            else
+              echo "should_create_pr=false" >> $GITHUB_OUTPUT
+            fi
+          fi
