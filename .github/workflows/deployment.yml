@@ -20,29 +20,10 @@ run-name: "${{ github.ref_name }}.${{ github.sha }}.${{ github.workflow }}"
 
 jobs:
   determine-environment:
-    runs-on: ubuntu-latest
-    outputs:
-      environment: ${{ steps.set-env.outputs.environment }}
-      is_pr: ${{ steps.set-env.outputs.is_pr }}
-      should_create_pr: ${{ steps.set-env.outputs.should_create_pr }}
-    steps:
-      - name: Set Environment Variables
-        id: set-env
-        run: |
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "environment=prod" >> $GITHUB_OUTPUT
-            echo "is_pr=true" >> $GITHUB_OUTPUT
-            echo "should_create_pr=false" >> $GITHUB_OUTPUT
-          else
-            echo "environment=${{ inputs.environment }}" >> $GITHUB_OUTPUT
-            echo "is_pr=false" >> $GITHUB_OUTPUT
-            if [[ "${{ inputs.environment }}" == "qa" ]]; then
-              echo "should_create_pr=true" >> $GITHUB_OUTPUT
-            else
-              echo "should_create_pr=false" >> $GITHUB_OUTPUT
-            fi
-          fi
-          
+    uses: ./.github/workflows/determine-environment.yml
+    with:
+      workflow_input: ${{ github.event.inputs.environment }}
+
   dev-terraform-verify:
     if: ${{ needs.determine-environment.outputs.environment == 'dev' }}
     needs: [determine-environment]
@@ -53,9 +34,102 @@ jobs:
 
   dev-terraform-plan:
     if: ${{ needs.determine-environment.outputs.environment == 'dev' }}
-    needs: [dev-terraform-verify]
+    needs: [determine-environment, dev-terraform-verify]
     uses: ./.github/workflows/terraform-plan.yml
     with:
       environment: dev
-      is_pr: ${{ needs.determine-environment.outputs.is_pr }}
+      is_pr: "${{ needs.determine-environment.outputs.is_pr }}"
+    secrets: inherit
+
+  dev-terraform-apply:
+    if: ${{ needs.determine-environment.outputs.environment == 'dev' }}
+    needs: [determine-environment, dev-terraform-plan]
+    uses: ./.github/workflows/terraform-apply.yml
+    with:
+      environment: dev
+    secrets: inherit
+
+  qa-terraform-verify:
+    if: ${{ always() && needs.determine-environment.outputs.environment == 'qa' || needs.determine-environment.outputs.environment == 'dev' && needs.dev-terraform-apply.result == 'success' }}
+    needs: [determine-environment, dev-terraform-apply]
+    uses: ./.github/workflows/terraform-verify.yml
+    with:
+      environment: qa
+    secrets: inherit
+
+  qa-terraform-plan:
+    if: ${{ always() && (needs.determine-environment.outputs.environment == 'qa' || needs.qa-terraform-verify.result == 'success') }}
+    needs: [qa-terraform-verify]
+    uses: ./.github/workflows/terraform-plan.yml
+    with:
+      environment: qa
+      is_pr: "${{ needs.determine-environment.outputs.is_pr }}"
+    secrets: inherit
+
+  qa-terraform-apply:
+    if: ${{ always() && (needs.determine-environment.outputs.environment == 'qa' || needs.qa-terraform-plan.result == 'success') }}
+    needs: [qa-terraform-plan]
+    uses: ./.github/workflows/terraform-apply.yml
+    with:
+      environment: qa
+    secrets: inherit
+
+  create-prod-pr:
+    if: ${{ always() && (needs.qa-terraform-plan.result == 'success') && github.ref != 'refs/heads/main' }}
+    needs: [determine-environment, qa-terraform-plan]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create Pull Request to Main
+        env:
+          GH_TOKEN: ${{ secrets.PR_TOKEN }}
+        run: |
+          REVIEWERS="Vignesh-VIT"
+
+          # Check if PR already exists
+          existing_pr=$(gh pr list --head "${{ github.ref_name }}" --base main --json number --jq '.[0].number // empty')
+
+          if [ -z "$existing_pr" ]; then
+            # Create new PR with reviewers
+            gh pr create \
+              --base main \
+              --head "${{ github.ref_name }}" \
+              --title "Deploy to Production: ${{ github.ref_name }}" \
+              --reviewer "$REVIEWERS" \
+              --body "## Production Deployment Request
+
+            **Branch:** \`${{ github.ref_name }}\`  
+            **SHA:** \`${{ github.sha }}\`
+
+            ### Environment Status:
+            - ✅ DEV: Deployed successfully
+            - ✅ QA: Deployed successfully
+            - ⏳ PROD: Waiting for approval
+
+            ### Changes:
+            This PR contains changes that have been tested in DEV and QA environments.
+
+            **Deployment Pipeline Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            **🔍 Reviewers:** Please review and approve for production deployment."
+                      
+                      echo "Created new PR with reviewers"
+                    else
+                      echo "PR already exists: #$existing_pr - skipping creation"
+          fi
+
+
+  prod-terraform-verify:
+    if: |
+      (needs.determine-environment.outputs.environment == 'prod' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'pull_request' && github.base_ref == 'main')
+    needs: [determine-environment]
+    uses: ./.github/workflows/terraform-verify.yml
+    with:
+      environment: prod
     secrets: inherit

@@ -1,7 +1,7 @@
 {
     "resource_groups": {
         "rg_01": {
-            "name": "rg-atlasms-dev-euw-01",
+            "name": "rg-atlasms-qa-euw-01",
             "location": "westeurope",
             "tags": {
                 "Env": "Development Environment"
@@ -10,14 +10,14 @@
     },
     "keyvaults": {
         "kv_01": {
-            "name": "kv-atlas-dev-euw-01",
+            "name": "kv-atlas-qa-euw-01",
             "resource_group_key": "rg_01",
             "sku": "standard"
         }
     },
     "signalr": {
         "signalr_01": {
-            "signalr_name": "signalr-atlasms-dev-euw-01",
+            "signalr_name": "signalr-atlasms-qa-euw-01",
             "sku": "Standard_S1",
             "capacity": 1,
             "service_mode": "Serverless",
@@ -71,7 +71,7 @@
     },
     "servicebus": {
         "service_01": {
-            "sb_ns_name": "sb-atlasms-dev-euw-01",
+            "sb_ns_name": "sb-atlasms-qa-euw-01",
             "sb_ns_sku": "Premium",
             "sb_ns_capacity": 1,
             "premium_messaging_partitions": 1,
@@ -87,7 +87,7 @@
     },
     "storage_account": {
         "storage_account_01": {
-            "storage_account_name": "storageatlasdeveuw01",
+            "storage_account_name": "storageatlasqaeuw01",
             "account_tier": "Standard",
             "resource_group_key": "rg_01"
         }
@@ -117,7 +117,7 @@
     },
     "cosmos_db": {
         "cosmosdb": {
-            "cosmosdb_name": "cosmos-atlasms-dev-euw",
+            "cosmosdb_name": "cosmos-atlasms-qa-euw",
             "public_network_access_enabled": "true",
             "bosch_ips": [
                 "103.205.152.0/22",
