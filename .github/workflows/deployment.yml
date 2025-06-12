@@ -1,0 +1,52 @@
+name: 'terraform-azure-deployment'
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - qa
+          - prod
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+run-name: "${{ github.ref_name }}.${{ github.sha }}.${{ github.workflow }}"
+
+jobs:
+  determine-environment:
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.set-env.outputs.environment }}
+      is_pr: ${{ steps.set-env.outputs.is_pr }}
+      should_create_pr: ${{ steps.set-env.outputs.should_create_pr }}
+    steps:
+      - name: Set Environment Variables
+        id: set-env
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "environment=prod" >> $GITHUB_OUTPUT
+            echo "is_pr=true" >> $GITHUB_OUTPUT
+            echo "should_create_pr=false" >> $GITHUB_OUTPUT
+          else
+            echo "environment=${{ inputs.environment }}" >> $GITHUB_OUTPUT
+            echo "is_pr=false" >> $GITHUB_OUTPUT
+            if [[ "${{ inputs.environment }}" == "qa" ]]; then
+              echo "should_create_pr=true" >> $GITHUB_OUTPUT
+            else
+              echo "should_create_pr=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+          
+  dev-terraform-verify:
+    if: needs.determine-environment.outputs.environment == 'dev'
+    needs: [determine-environment]
+    uses: ./.github/workflows/terraform-verify.yml
+    with:
+      environment: dev
+    secrets: inherit
