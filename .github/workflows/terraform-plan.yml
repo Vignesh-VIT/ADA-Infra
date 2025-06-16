@@ -5,11 +5,6 @@ on:
         description: 'Target environment'
         required: true
         type: string
-      is_pr:
-        description: 'Is this a PR run'
-        required: false
-        type: string
-        default: false
       terraform_version:
         description: 'Terraform version'
         required: false
@@ -20,14 +15,41 @@ on:
         required: false
         type: string
         default: 'terraform/infra'
+    secrets:
+      atlas-github-token:
+        required: true
+      atlas-sp-secret:
+        required: true
+      be-app-secret:
+        required: true
+      cliff-secret:
+        required: true
+      databricks-clientid:
+        required: true
+      databricks-clientsecret:
+        required: true
+      dsp-config-git-token:
+        required: true
+      AZURE_CREDENTIALS:
+        required: true
+      AZURE_SUBSCRIPTION_ID:
+        required: true
+      AZURE_CLIENT_ID:
+        required: true
+      AZURE_CLIENT_SECRET:
+        required: true
+      AZURE_TENANT_ID:
+        required: true
 
 env:
   ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
   ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
   ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
   ARM_USE_CLI: false
+  # ARM_USE_MSI: true
   TF_LOG: info
-
+      
 jobs:
   terraform-plan:
     runs-on: ubuntu-latest
@@ -45,6 +67,14 @@ jobs:
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # - name: Azure login
+      #   uses: azure/login@v2
+      #   with:
+      #     auth-type: IDENTITY
+      #     tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+      #     subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      #     enable-AzPSSession: false
 
       - name: Set subscription ID
         run: |
@@ -66,6 +96,13 @@ jobs:
           cd ${{ inputs.terraform_folder }}
           terraform plan \
             -var-file=../${{ inputs.environment }}/terraform.tfvars \
+            -var="atlas-github-token=${{ secrets.atlas-github-token }}" \
+            -var="atlas-sp-secret=${{ secrets.atlas-sp-secret }}" \
+            -var="be-app-secret=${{ secrets.be-app-secret }}" \
+            -var="cliff-secret=${{ secrets.cliff-secret }}" \
+            -var="databricks-clientid=${{ secrets.databricks-clientid }}" \
+            -var="databricks-clientsecret=${{ secrets.databricks-clientsecret }}" \
+            -var="dsp-config-git-token=${{ secrets.dsp-config-git-token }}" \
             -out=tfplan
         continue-on-error: false
 

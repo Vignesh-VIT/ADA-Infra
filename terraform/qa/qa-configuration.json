@@ -152,6 +152,46 @@
             "type": "connection_string",
             "keyvault_key": "kv_01"
             
+        },
+        "cosmosdb_secret_01": {
+            "name": "mongodb-connection-string",
+            "type": "connection_string",
+            "keyvault_key": "kv_01"
+        },
+        "be-app-secret": {
+            "name": "be-app-secret",
+            "type": "secret",
+            "keyvault_key": "kv_01"
+        },
+        "atlas-sp-secret": {
+            "name": "atlas-sp-secret",
+            "type": "secret",
+            "keyvault_key": "kv_01"
+        },
+        "atlas-github-token": {
+            "name": "atlas-github-token",
+            "type": "secret",
+            "keyvault_key": "kv_01"
+        },
+        "cliff-secret": {
+            "name": "cliff-secret",
+            "type": "secret",
+            "keyvault_key": "kv_01"
+        },
+        "databricks-clientid": {
+            "name": "databricks-clientid",
+            "type": "secret",
+            "keyvault_key": "kv_01"
+        },
+        "databricks-clientsecret": {
+            "name": "databricks-clientsecret",
+            "type": "secret",
+            "keyvault_key": "kv_01"
+        },
+        "dsp-config-git-token": {
+            "name": "dsp-config-git-token",
+            "type": "secret",
+            "keyvault_key": "kv_01"
         }
     }
 }

@@ -1,4 +1,4 @@
-name: 'terraform-azure-deployment'
+name: 'atlas-infrastructure-deployment'
 
 on:
   workflow_dispatch:
@@ -19,137 +19,141 @@ on:
 run-name: "${{ github.ref_name }}.${{ github.sha }}.${{ github.workflow }}"
 
 jobs:
-  determine-environment:
-    uses: ./.github/workflows/determine-environment.yml
-    with:
-      workflow_input: ${{ github.event.inputs.environment }}
-
   dev-terraform-verify:
-    if: ${{ needs.determine-environment.outputs.environment == 'dev' }}
-    needs: [determine-environment]
+    if: ${{ github.event.inputs.environment == 'dev' }}
     uses: ./.github/workflows/terraform-verify.yml
     with:
-      environment: dev
-    secrets: inherit
+      environment: ${{ github.event.inputs.environment }}
+    secrets:
+      AZURE_CREDENTIALS: ${{ secrets.AZURE_DEV_CREDENTIALS }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_DEV_SUBSCRIPTION_ID }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_DEV_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_DEV_CLIENT_SECRET }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
   dev-terraform-plan:
-    if: ${{ needs.determine-environment.outputs.environment == 'dev' }}
-    needs: [determine-environment, dev-terraform-verify]
+    if: ${{ github.event.inputs.environment == 'dev' }}
+    needs: [dev-terraform-verify]
     uses: ./.github/workflows/terraform-plan.yml
     with:
-      environment: dev
-      is_pr: "${{ needs.determine-environment.outputs.is_pr }}"
-    secrets: inherit
+      environment: ${{ github.event.inputs.environment }}
+    secrets:
+      atlas-github-token: ${{ secrets.ATLAS_DEV_GITHUB_TOKEN }}
+      atlas-sp-secret: ${{ secrets.ATLAS_DEV_SP_SECRET }}
+      be-app-secret: ${{ secrets.BE_DEV_APP_SECRET }}
+      cliff-secret: ${{ secrets.CLIFF_DEV_SECRET }}
+      databricks-clientid: ${{ secrets.DATABRICKS_DEV_CLIENTID }}
+      databricks-clientsecret: ${{ secrets.DATABRICKS_DEV_CLIENT_SECRET }}
+      dsp-config-git-token: ${{ secrets.DSP_DEV_CONFIG_GIT_TOKEN }}
+      AZURE_CREDENTIALS: ${{ secrets.AZURE_DEV_CREDENTIALS }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_DEV_SUBSCRIPTION_ID }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_DEV_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_DEV_CLIENT_SECRET }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
   dev-terraform-apply:
-    if: ${{ needs.determine-environment.outputs.environment == 'dev' }}
-    needs: [determine-environment, dev-terraform-plan]
+    if: ${{ github.event.inputs.environment == 'dev' }}
+    needs: [dev-terraform-plan]
     uses: ./.github/workflows/terraform-apply.yml
     with:
-      environment: dev
-    secrets: inherit
+      environment: ${{ github.event.inputs.environment }}
+    secrets:
+      AZURE_CREDENTIALS: ${{ secrets.AZURE_DEV_CREDENTIALS }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_DEV_SUBSCRIPTION_ID }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_DEV_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_DEV_CLIENT_SECRET }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
   qa-terraform-verify:
-    if: ${{ always() && needs.determine-environment.outputs.environment == 'qa' || needs.determine-environment.outputs.environment == 'dev' && needs.dev-terraform-apply.result == 'success' }}
-    needs: [determine-environment, dev-terraform-apply]
+    if: ${{ always() && github.event.inputs.environment == 'qa' || github.event.inputs.environment == 'qa' && needs.dev-terraform-apply.result == 'success' }}
+    needs: [dev-terraform-apply]
     uses: ./.github/workflows/terraform-verify.yml
     with:
-      environment: qa
-    secrets: inherit
+      environment: ${{ github.event.inputs.environment }}
+    secrets:
+      AZURE_CREDENTIALS: ${{ secrets.AZURE_QA_CREDENTIALS }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_QA_SUBSCRIPTION_ID }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_QA_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_QA_CLIENT_SECRET }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
   qa-terraform-plan:
-    if: ${{ always() && (needs.determine-environment.outputs.environment == 'qa' || needs.qa-terraform-verify.result == 'success') }}
+    if: ${{ always() && (github.event.inputs.environment == 'qa' || needs.qa-terraform-verify.result == 'success') }}
     needs: [qa-terraform-verify]
     uses: ./.github/workflows/terraform-plan.yml
     with:
-      environment: qa
-      is_pr: "${{ needs.determine-environment.outputs.is_pr }}"
-    secrets: inherit
+      environment: ${{ github.event.inputs.environment }}
+    secrets:
+      atlas-github-token: ${{ secrets.ATLAS_QA_GITHUB_TOKEN }}
+      atlas-sp-secret: ${{ secrets.ATLAS_QA_SP_SECRET }}
+      be-app-secret: ${{ secrets.BE_QA_APP_SECRET }}
+      cliff-secret: ${{ secrets.CLIFF_QA_SECRET }}
+      databricks-clientid: ${{ secrets.DATABRICKS_QA_CLIENTID }}
+      databricks-clientsecret: ${{ secrets.DATABRICKS_QA_CLIENT_SECRET }}
+      dsp-config-git-token: ${{ secrets.DSP_QA_CONFIG_GIT_TOKEN }}
+      AZURE_CREDENTIALS: ${{ secrets.AZURE_QA_CREDENTIALS }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_QA_SUBSCRIPTION_ID }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_QA_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_QA_CLIENT_SECRET }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
   qa-terraform-apply:
-    if: ${{ always() && (needs.determine-environment.outputs.environment == 'qa' || needs.qa-terraform-plan.result == 'success') }}
+    if: ${{ always() && (github.event.inputs.environment == 'qa' || needs.qa-terraform-plan.result == 'success') }}
     needs: [qa-terraform-plan]
     uses: ./.github/workflows/terraform-apply.yml
     with:
-      environment: qa
-    secrets: inherit
-
-  # create-prod-pr:
-  #   if: ${{ always() && (needs.qa-terraform-plan.result == 'success') && github.ref != 'refs/heads/main' }}
-  #   needs: [determine-environment, qa-terraform-plan]
-  #   runs-on: ubuntu-latest
-
-  #   steps:
-  #     - name: Checkout Repository
-  #       uses: actions/checkout@v4
-  #       with:
-  #         fetch-depth: 0
-
-      # - name: Create Pull Request to Main
-      #   env:
-      #     GH_TOKEN: ${{ secrets.PR_TOKEN }}
-      #   run: |
-      #     REVIEWERS="Vignesh-VIT"
-
-      #     # Check if PR already exists
-      #     existing_pr=$(gh pr list --head "${{ github.ref_name }}" --base main --json number --jq '.[0].number // empty')
-
-      #     if [ -z "$existing_pr" ]; then
-      #       # Create new PR with reviewers
-      #       gh pr create \
-      #         --base main \
-      #         --head "${{ github.ref_name }}" \
-      #         --title "Deploy to Production: ${{ github.ref_name }}" \
-      #         --reviewer "$REVIEWERS" \
-      #         --body "## Production Deployment Request
-
-      #       **Branch:** \`${{ github.ref_name }}\`  
-      #       **SHA:** \`${{ github.sha }}\`
-
-      #       ### Environment Status:
-      #       - ✅ DEV: Deployed successfully
-      #       - ✅ QA: Deployed successfully
-      #       - ⏳ PROD: Waiting for approval
-
-      #       ### Changes:
-      #       This PR contains changes that have been tested in DEV and QA environments.
-
-      #       **Deployment Pipeline Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
-      #       **🔍 Reviewers:** Please review and approve for production deployment."
-                      
-      #       echo "Created new PR with reviewers"
-      #     else
-      #       echo "PR already exists: #$existing_pr - skipping creation"
-      #     fi
+      environment: ${{ github.event.inputs.environment }}
+    secrets:
+      AZURE_CREDENTIALS: ${{ secrets.AZURE_QA_CREDENTIALS }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_QA_SUBSCRIPTION_ID }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_QA_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_QA_CLIENT_SECRET }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
 
   prod-terraform-verify:
     if: |
-      # (needs.determine-environment.outputs.environment == 'prod' && github.ref == 'refs/heads/main') ||
-      # (github.event_name == 'pull_request' && github.base_ref == 'main')
-      ${{ always() && needs.determine-environment.outputs.environment == 'prod' || needs.determine-environment.outputs.environment == 'prod' && needs.qa-terraform-apply.result == 'success' }}
-    needs: [determine-environment, qa-terraform-apply]
+      ${{ always() && github.event.inputs.environment == 'prod' || github.event.inputs.environment == 'prod' && needs.qa-terraform-apply.result == 'success'}}
+    needs: [qa-terraform-apply]
     uses: ./.github/workflows/terraform-verify.yml
     with:
-      environment: prod
-    secrets: inherit
+      environment: ${{ github.event.inputs.environment }}
+    secrets:
+      AZURE_CREDENTIALS: ${{ secrets.AZURE_PROD_CREDENTIALS }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_PROD_SUBSCRIPTION_ID }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_PROD_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_PROD_CLIENT_SECRET }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
   prod-terraform-plan:
-    if: ${{ always() && (needs.determine-environment.outputs.environment == 'prod' || needs.prod-terraform-verify.result == 'success') }}
-    # if: ${{ (needs.determine-environment.outputs.environment == 'prod' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request' && github.base_ref == 'main') }}
+    if: ${{ always() && (github.event.inputs.environment == 'prod' || needs.prod-terraform-verify.result == 'success') }}
     needs: [prod-terraform-verify]
     uses: ./.github/workflows/terraform-plan.yml
     with:
-      environment: prod
-      is_pr: ${{ needs.determine-environment.outputs.is_pr }}
-    secrets: inherit
+      environment: ${{ github.event.inputs.environment }}
+    secrets:
+      atlas-github-token: ${{ secrets.ATLAS_PROD_GITHUB_TOKEN }}
+      atlas-sp-secret: ${{ secrets.ATLAS_PROD_SP_SECRET }}
+      be-app-secret: ${{ secrets.BE_PROD_APP_SECRET }}
+      cliff-secret: ${{ secrets.CLIFF_PROD_SECRET }}
+      databricks-clientid: ${{ secrets.DATABRICKS_PROD_CLIENTID }}
+      databricks-clientsecret: ${{ secrets.DATABRICKS_PROD_CLIENT_SECRET }}
+      dsp-config-git-token: ${{ secrets.DSP_PROD_CONFIG_GIT_TOKEN }}
+      AZURE_CREDENTIALS: ${{ secrets.AZURE_PROD_CREDENTIALS }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_PROD_SUBSCRIPTION_ID }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_PROD_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_PROD_CLIENT_SECRET }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
   prod-terraform-apply:
-    if: ${{ always() && (needs.determine-environment.outputs.environment == 'prod' || needs.prod-terraform-plan.result == 'success') }}
-    # if: ${{ needs.determine-environment.outputs.environment == 'prod' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
+    if: ${{ always() && (github.event.inputs.environment == 'prod' || needs.prod-terraform-plan.result == 'success') }}
     needs: [prod-terraform-plan]
     uses: ./.github/workflows/terraform-apply.yml
     with:
-      environment: prod
-    secrets: inherit
+      environment: ${{ github.event.inputs.environment }}
+    secrets:
+      AZURE_CREDENTIALS: ${{ secrets.AZURE_PROD_CREDENTIALS }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_PROD_SUBSCRIPTION_ID }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_PROD_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_PROD_CLIENT_SECRET }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
